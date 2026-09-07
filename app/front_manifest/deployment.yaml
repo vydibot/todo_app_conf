@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-port
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: server-port
+  template:
+    metadata:
+      labels:
+        app: server-port
+    spec:
+      volumes:
+        - name: imagesave
+          persistentVolumeClaim:
+            claimName: image-pvc
+      containers:
+        - name: server-port
+          image: us-central1-docker.pkg.dev/dwk-gke-505002/todo-repo/frontend:v1.1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          env:
+            - name: PORT
+              value: "8000"
+            - name: BACKEND_URL
+              value: "http://todo-backend-svc:8000"
+          envFrom:
+            - configMapRef:
+                name: todo-app-config
+          volumeMounts:
+            - name: imagesave
+              mountPath: /app/images
+          resources:
+            requests:
+              cpu: "30m"   # 1/30th of a CPU core
+              memory: "128Mi"  # 128 Megabytes of RAM
+            limits:
+              cpu: "250m"      # Max 1/4th of a CPU core
+              memory: "256Mi"  # Max 256 Megabytes of RAM

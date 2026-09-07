@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend-dep
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+    spec:
+      containers:
+        - name: todo-backend
+          image: us-central1-docker.pkg.dev/dwk-gke-505002/todo-repo/backend:v1.1.1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          env:
+            - name: PORT
+              value: "8000"
+            - name: POSTGRES_HOST
+              value: "todo-postgres-svc"
+            - name: POSTGRES_DB
+              value: "todos_db"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          envFrom:
+            - configMapRef:
+                name: todo-app-config
+          resources:
+            requests:
+              cpu: "100m"      # 1/10th of a CPU core
+              memory: "256Mi"  # 256 Megabytes of RAM
+            limits:
+              cpu: "250m"      # Max 1/4th of a CPU core
+              memory: "512Mi"  # Max 512 Megabytes of RAM

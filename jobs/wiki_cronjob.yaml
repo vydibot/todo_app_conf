@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: wiki-todo-cronjob
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: wiki-todo-generator
+              image: curlimages/curl:latest
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "128Mi"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  WIKI_URL=$(curl -s -L -w "%{url_effective}" -o /dev/null "https://en.wikipedia.org/wiki/Special:Random")
+                  
+                  TODO_TEXT="Read $WIKI_URL"
+                  echo "Generated todo: $TODO_TEXT"
+                  
+                  curl -s -f -X POST "http://todo-backend-svc:8000/todos" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"text\": \"$TODO_TEXT\"}"
+          restartPolicy: OnFailure
